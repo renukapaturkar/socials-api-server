@@ -3,19 +3,26 @@ const {Post} = require('../models/post.model')
 const {cloudinary} = require('../config/cloudinary')
 
 const createPost = async(req, res) => {
-	const {postDetails} = req.body
-	const {userId} = req.user
-	console.log(userId)
-	try {
-		const newPost = new Post({userId: userId, ...postDetails})
-		const newPostSaved = await newPost.save()
-		const post = await newPostSaved.populate('userId', 'username profilePicture')
-		const postSaved = await post.save()
-		res.status(200).json(postSaved);
+	const {userId} = req.user; 
+	const {content, image} = req.body
+	try{
+		let uploadData, imageData
+		if(image){
+			uploadInfo = await cloudinary.uploader.upload(image)
+			imageData = {
+				public_id: uploadImage.public_id,
+				url: uploadImage.url
+			}
+		}
+		const newPost = await new Post({userId: userId, content: content, image:imageData})
+		console.log("newPost", newPost)
+		const post = await newPost.save()
+		console.log("saved Post", post)
+		res.status(200).json({success: true, message: "new post created", data: post})
 
 
 	}catch(error){
-		res.status(500).json({success: false, message: "Internal Server Error", errMessage: error.message })
+		res.status(500).json({success: false, message: "Internal Server Error", errMessage: error.message})
 	}
 	
 }
@@ -60,7 +67,7 @@ const likePost = async(req, res) => {
 const getPost = async(req, res) => {
 	const {postId} = req.params
 	try {
-		const post = await Post.findById(postId).populate("userId", "username profilePicture")
+		const post = await Post.findById(postId).populate("userId", "name username profilePicture")
 		res.status(200).json({success: true, post: post})
 
 	}catch(error){
@@ -98,7 +105,7 @@ const commentOnPost = async(req, res) => {
 				userid: userId, 
 				comment: comment
 			}
-		}}, {new: true}).populate("userId", "username name profilePicture").populate("comment.userId", "username name profilePicture")
+		}}, {new: true}).populate("userId", "name username profilePicture").populate("comment.userId", "name username profilePicture")
 		if(post && post.userId._id !== userId){
 			await Post.findByIdAndUpdate(post.userId._id, {$push: {
 				notifications: {
@@ -124,7 +131,7 @@ const deleteComment = async(req, res) => {
 	try {
 		const post = await Post.findByIdAndUpdate(postId, {$pull: {
 			comment: {_id: commentId }
-		}}).populate("userId", "username name profile").populate("comment.userId", "username name profilePicture")
+		}}).populate("userId", "name username profilePicture").populate("comment.userId", "name username profilePicture")
 		if(post && post.userId._id !== userId){
 			
 		}
@@ -134,5 +141,27 @@ const deleteComment = async(req, res) => {
 	}
 }
 
+//get feed 
 
-module.exports = {createPost, deletePost, likePost, getPost, getAllPosts, commentOnPost}
+const getFeed = async(req, res) => {
+	const {userId} = req.user
+	try {
+		const post = await Post.find({userId: userId}).populate("userId", "name username profilePicture")	
+
+		const user = User.findById(userId)
+		const postsFromFollowings = await Promise.all(
+			user.following.map(followingId => {
+				return Post.find({userId: followingId}).populate("userId","name username profilePicture")
+			})
+		)
+		post.__v = undefined
+		post.updatedAt = undefined
+		const allFeedPosts = post.concat(...postsFromFollowings)
+		res.status(200).json({success: true, posts: allFeedPosts})
+	}catch(error){
+		res.status(500).json({success: false, message: "Internal Server error", errMessage: error.message})
+	}
+}
+
+
+module.exports = {createPost, deletePost, likePost, getPost, getAllPosts, commentOnPost, getFeed}

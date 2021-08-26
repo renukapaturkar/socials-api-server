@@ -16,12 +16,12 @@ const saveNewUserDetails = async({name, email, username, password}) => {
     const hashedPassword = await bcrypt.hash(newUser.password, salt);
     newUser.password = hashedPassword
 
-	// let uploadImage = await cloudinary.uploader.upload(profilePicture)
-	// console.log("uploaded image value", uploadImage)
-	// imageData = {
-	// 	public_id: uploadImage.public_id,
-	// 	url: uploadImage.url
-	// }
+	let uploadImage = await cloudinary.uploader.upload(profilePicture)
+	console.log("uploaded image value", uploadImage)
+	imageData = {
+		public_id: uploadImage.public_id,
+		url: uploadImage.url
+	}
     const savedUser = await newUser.save()
     return savedUser; 
 }
