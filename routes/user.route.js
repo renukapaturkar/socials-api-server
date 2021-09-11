@@ -1,6 +1,8 @@
-const express = require('express')
+const express = require('express');
 const router = express.Router()
-const {updateUser, deleteUser, getUser, followUser, unfollowUser, getAllFollowers, getAllFollowings} = require('../controllers/user.controller.js')
+const {updateUser, deleteUser, getUser, followUser, unfollowUser, getAllFollowers, getAllFollowing} = require('../controllers/user.controller.js')
+const passport = require('passport')
+const jwt = require('../config/passport')
 
 
 router.post('/updateuser', updateUser)
@@ -13,7 +15,12 @@ router.post('/follow', followUser)
 
 router.post('/unfollow', unfollowUser)
 
-router.get('/followers', getAllFollowers)
+router.get('/:username/followers', getAllFollowers)
 
-router.get('/followings', getAllFollwings)
+router.get('/:username/followings', getAllFollowing)
 
+router.post('/updateuser', updateUser)
+
+
+
+module.exports = router;

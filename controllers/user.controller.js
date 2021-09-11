@@ -10,10 +10,35 @@ const {User} = require('../models/user.model')
 
 const updateUser = async(req, res) => {
 	const {userId} = req.params
-	const {userDetails} = req.body
+	const {name, email, username,password, bio, profilePicture } = req.body
 	try {
-		const userUpdated = findByIdAndUpdate(userId, {$set: userDetails}, {new: true}).select(" username name email password profilePicture")
-		res.status(200).json({success: true, user: userUpdated})
+
+
+		if(profilePicture && !profilePicture.includes("res.cloudinary.com/conclave")) {
+			if(userId.profilePicture.public_id){
+				await cloudinary.uploader.destroy(userId.image.public_id)
+			if(profilePicture.length > 0 ){
+				const uploadInfo = await cloudinary.uploader.upload(profilePicture)
+				const imageData = {
+					public_id: uploadInfo.public_id, 
+					imageUrl: uploadInfo.url
+				}
+				const updatedUser = await User.findByIdAndUpdate(userId, {profilePicture: imageData})
+				console.log(updatedUser)
+				
+			}
+			}
+		}
+
+		if(password){
+			const salt = await bcrypt.genSalt(10)
+			const newPassword = await bcrypt.hash(password, salt) 
+
+			const updatedUser = await User.findByIdAndUpdate(userId, {password: newPassword})
+		}
+		res.status(200).json({success: true, user: updatedUser})
+
+
 	}catch(error){
 		res.status(500).json({success: false, message: "Internal Server Error", errMessage: error.message})
 	}
@@ -46,19 +71,24 @@ const getUser = async(req,res)=> {
 
 
 const followUser = async(req,res) => {
-	const {userId} = req.user
-	const {userToFollow} = req.body
+	const userId = req.user
+	console.log(userId, "userId")
+	const {targetId} = req.body
+	console.log(targetId, "targetId")
 	try {
-		const user = await User.findIdAndUpdate(userId, { $addToSet: { following: userToFollow } }, {new: true})
-		const followedUser = await User.findIdAndUpdate(userToFollow, {$addToSet:{followers: userId}}, 
-		{$push: {
-			notification: {
-				notify: 'follow', 
-				user: userid,
-				date: new Date().toISOString()
-			}
-		}}, {new: true}).select('followers')
-		res.status(200).jsom({success: true, message: "following the user", user: followedUser})
+		const currentUser = await User.findByIdAndUpdate(userId, { $addToSet: { following: targetId } }, {new: true})
+    const targetUser = await User.findByIdAndUpdate(targetId, {
+      $addToSet: {
+        followers: userId
+      }, $push: {
+        notification: {
+          notifytype: "follow",
+          sourceUser: userId,
+          date: new Date().toISOString()
+        }
+      }
+    }, { new: true }).select("followers")
+		res.status(200).json({success: true, message: "following the user", user: targetUser})
 	}catch(error){
 		res.status(500).json({success: false, message: "Internal Server error",errMessage: error.message })
 	}
@@ -122,7 +152,11 @@ const getAllFollowing = async(req, res) => {
 
 }
 
+const getUsersPosts = async(req, res) => {
+	
+}
 
-module.exports = {updateUser, deleteUser, getUser, followUser, unfollowUser, getAllFollowers, getAllFollowing}
+
+module.exports = {updateUser, deleteUser, getUser, followUser, unfollowUser, getAllFollowers, getAllFollowing, updateUser}
 
 

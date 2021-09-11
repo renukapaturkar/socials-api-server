@@ -11,13 +11,19 @@ app.use(cors())
 
 const authRoute = require('./routes/auth.route')
 const postsRoute = require('./routes/post.route')
+const usersRoute = require('./routes/user.route')
+const imageRoute = require('./routes/images.route')
 
 const {initializeDBConnection}  = require('./db/db.connect.js')
 
 initializeDBConnection()
 
 app.use(authRoute)
+app.use('/images', imageRoute)
+app.use('/users', authVerify, usersRoute)
 app.use('/posts', authVerify, postsRoute)
+
+
 
 
 

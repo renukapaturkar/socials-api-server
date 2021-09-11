@@ -72,6 +72,7 @@ const userSignIn = async(req, res) => {
 	const {email, password} = req.body;
 	try {
 		const user = await findUserByEmail(email)
+		console.log(user)
 		if(!user){
 			res.status(404).json({success: false, message: "User does not exists, Please sign up"})
 		}
