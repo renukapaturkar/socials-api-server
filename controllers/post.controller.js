@@ -8,6 +8,8 @@ const createPost = async(req, res) => {
 
 	try{
 		const newPost = await new Post({userId: userId, content: content, image: image})
+		
+		newPost.populate('userId', 'name username profilePicture').execPopulate();
 		const post = await newPost.save()
 		res.status(200).json({success: true, message: "new post created", data: post})
 	}catch(error){
@@ -60,7 +62,7 @@ const likePost = async(req, res) => {
 const getPost = async(req, res) => {
 	const {postId} = req.params
 	try {
-		const post = await Post.findById(postId).populate("userId", "name username profilePicture")
+		const post = await Post.findById(postId).populate("userId", "name username profilePicture").populate("comments.userId", "name username profilePicture")
 		res.status(200).json({success: true, post: post})
 
 	}catch(error){
@@ -74,7 +76,6 @@ const getUserPosts = async(req, res)=> {
 	console.log(userId, "userId")
 	try {
 		const userPosts = await Post.find({userId: userId}).populate("userId", "name username profilePicture")
-		console.log(userPosts, "This is users posts")
 		res.status(200).json({success: true, posts: userPosts})
 	}catch(error){
 		res.status(500).json({success: false, message: "Internal Server Error", errMessage: error.message})

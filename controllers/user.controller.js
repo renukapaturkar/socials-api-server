@@ -1,49 +1,28 @@
 const {User} = require('../models/user.model')
 
-//update user
-//delete user//
-//get user
-//search user
-//follow user
-//unfollow user
-
 
 const updateUser = async(req, res) => {
-	const {userId} = req.params
-	const {name, email, username,password, bio, profilePicture } = req.body
+	const userId = req.user
+	console.log(userId, "userId")
+	const userDetails= req.body
+	console.log(userDetails, "userDetails")
 	try {
-
-
-		if(profilePicture && !profilePicture.includes("res.cloudinary.com/conclave")) {
-			if(userId.profilePicture.public_id){
-				await cloudinary.uploader.destroy(userId.image.public_id)
-			if(profilePicture.length > 0 ){
-				const uploadInfo = await cloudinary.uploader.upload(profilePicture)
-				const imageData = {
-					public_id: uploadInfo.public_id, 
-					imageUrl: uploadInfo.url
-				}
-				const updatedUser = await User.findByIdAndUpdate(userId, {profilePicture: imageData})
-				console.log(updatedUser)
-				
-			}
-			}
-		}
-
-		if(password){
-			const salt = await bcrypt.genSalt(10)
-			const newPassword = await bcrypt.hash(password, salt) 
-
-			const updatedUser = await User.findByIdAndUpdate(userId, {password: newPassword})
-		}
-		res.status(200).json({success: true, user: updatedUser})
-
-
+		const user = await User.findByIdAndUpdate(userId, {$set: userDetails}, {new: true}).select("name username profilePicture bio followers following")
+		res.status(200).json({success: true, user: user})
 	}catch(error){
 		res.status(500).json({success: false, message: "Internal Server Error", errMessage: error.message})
 	}
 }
 
+
+const searchUser = async(req, res) => {
+	const {username} = req.query
+	try{
+		const user = await User.find({ $or: [{ name: { $regex: username, $options:"$i" } }, { username: { $regex: username, $options:"$i"} }] }).select("name username profilePicture")
+	}catch(error){
+		res.status(500).json({success: false, message: "Internal Server error", errMessage: error.message})
+	}
+}
 
 const deleteUser = async(req, res) => {
 	const {userId} = req.params
@@ -72,9 +51,7 @@ const getUser = async(req,res)=> {
 
 const followUser = async(req,res) => {
 	const userId = req.user
-	console.log(userId, "userId")
 	const {targetId} = req.body
-	console.log(targetId, "targetId")
 	try {
 		const currentUser = await User.findByIdAndUpdate(userId, { $addToSet: { following: targetId } }, {new: true})
     const targetUser = await User.findByIdAndUpdate(targetId, {
@@ -87,7 +64,7 @@ const followUser = async(req,res) => {
           date: new Date().toISOString()
         }
       }
-    }, { new: true }).select("followers")
+    }, { new: true }).select("followers following")
 		res.status(200).json({success: true, message: "following the user", user: targetUser})
 	}catch(error){
 		res.status(500).json({success: false, message: "Internal Server error",errMessage: error.message })
@@ -95,12 +72,12 @@ const followUser = async(req,res) => {
 }
 
 const unfollowUser = async(req, res) => {
-	const {userId} = req.user
-	const {userToUnfollow} = req.body
+	const userId = req.user
+	const {targetId} = req.body
 	try {
-		const user = await User.findByIdAndUpdate(userId, {$pull: {following: userToUnfollow}}, {new: true})
+		const user = await User.findByIdAndUpdate(userId, {$pull: {following: targetId}}, {new: true})
 
-		const unfollowedUser = await User.findByIdAndUpdate(userToUnfollow, { $pull: { followers: userId }}, {new: true})
+		const unfollowedUser = await User.findByIdAndUpdate(targetId, { $pull: { followers: userId }}, {new: true}).select("following followers")
 		res.status(200).json({success: true, message: "unfollowed the user", user: unfollowedUser})
 	}catch(error){
 		res.status(500).json({success:false, message: "Internal Server Error", errMessage: error.message})
@@ -152,11 +129,7 @@ const getAllFollowing = async(req, res) => {
 
 }
 
-const getUsersPosts = async(req, res) => {
-	
-}
 
-
-module.exports = {updateUser, deleteUser, getUser, followUser, unfollowUser, getAllFollowers, getAllFollowing, updateUser}
+module.exports = {updateUser, deleteUser, getUser, followUser, unfollowUser, getAllFollowers, getAllFollowing, updateUser, searchUser}
 
 

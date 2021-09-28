@@ -7,7 +7,7 @@ const router = express.Router()
 router.post('/upload', upload.single("image"), async(req, res) => {
 	try{
 		const result = await cloudinary.uploader.upload(req.file.path)
-		res.status(201).json({success: true, url: result.url, public_id: result.public_id})
+		res.status(200).json({success: true, url: result.url, public_id: result.public_id})
 		console.log(result)
 	}catch(error){
 		console.log(error)
